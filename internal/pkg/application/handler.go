@@ -12,11 +12,11 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 
-	gql "github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/_presentation/api/graphql"
-	fiwarecontext "github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/application/context"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
-	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
+	gql "github.com/diwise/api-temperature/internal/pkg/_presentation/api/graphql"
+	fiwarecontext "github.com/diwise/api-temperature/internal/pkg/application/context"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
 
 	"github.com/rs/cors"
 )

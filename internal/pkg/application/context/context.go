@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/models"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/datamodels/fiware"
-	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
-	"github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld/types"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/models"
+	"github.com/diwise/ngsi-ld-golang/pkg/datamodels/fiware"
+	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
+	"github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld/types"
 )
 
 type contextSource struct {

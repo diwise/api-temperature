@@ -10,7 +10,7 @@ Then, execute the `docker-compose` command shown below.
 
 # Building and tagging with Docker
 
-`docker build -f deployments/Dockerfile -t iot-for-tillgenglighet/api-temperature:latest .`
+`docker build -f deployments/Dockerfile -t diwise/api-temperature:latest .`
 
 # Build for local testing with Docker Compose
 

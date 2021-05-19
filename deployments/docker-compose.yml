@@ -1,7 +1,7 @@
 version: '3'
 services:
   temperature:
-    image: 'iot-for-tillgenglighet/api-temperature:latest'
+    image: 'diwise/api-temperature:latest'
     build:
       context: ..
       dockerfile: ./deployments/Dockerfile
@@ -26,7 +26,7 @@ services:
 
 
   deviceregistry:
-    image: 'iot-for-tillgenglighet/iot-device-registry:latest'
+    image: 'diwise/iot-device-registry:latest'
     restart: always
     environment:
       DIWISE_SQLDB_HOST: 'postgresdb'
@@ -57,7 +57,7 @@ services:
     
     
   ingress:
-    image: 'iot-for-tillgenglighet/ingress-trafikverket:latest'
+    image: 'diwise/ingress-trafikverket:latest'
     restart: always
     depends_on:
       - temperature
@@ -71,7 +71,7 @@ services:
   
   
   postgresdb:
-    image: 'iot-for-tillgenglighet/testdb-postgres:latest'
+    image: 'diwise/testdb-postgres:latest'
     build:
       context: ..
       dockerfile: ./test/database/testdb-dockerfile

@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/application/context"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/models"
-	ngsi "github.com/iot-for-tillgenglighet/ngsi-ld-golang/pkg/ngsi-ld"
+	"github.com/diwise/api-temperature/internal/pkg/application/context"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/models"
+	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
 )
 
 const inTheWater bool = true

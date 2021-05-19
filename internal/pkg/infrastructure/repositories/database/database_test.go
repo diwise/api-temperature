@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 )
 
 func TestMain(m *testing.M) {

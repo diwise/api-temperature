@@ -1,14 +1,14 @@
 package main
 
 import (
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/application"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/api-temperature/internal/pkg/application"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/pkg/infrastructure/messaging/commands"
+	"github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
 
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
+	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/messaging-golang/pkg/messaging/telemetry"
 )
 
 func main() {

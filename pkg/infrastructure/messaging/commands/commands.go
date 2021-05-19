@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
+	"github.com/diwise/messaging-golang/pkg/messaging/telemetry"
 )
 
 const (

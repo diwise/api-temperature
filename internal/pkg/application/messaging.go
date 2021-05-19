@@ -7,11 +7,11 @@ import (
 
 	"github.com/streadway/amqp"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/database"
-	"github.com/iot-for-tillgenglighet/api-temperature/pkg/infrastructure/messaging/commands"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging"
-	"github.com/iot-for-tillgenglighet/messaging-golang/pkg/messaging/telemetry"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
+	"github.com/diwise/messaging-golang/pkg/messaging"
+	"github.com/diwise/messaging-golang/pkg/messaging/telemetry"
 )
 
 //MessagingContext is an interface that allows mocking of messaging.Context parameters

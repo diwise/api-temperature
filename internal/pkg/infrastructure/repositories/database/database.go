@@ -15,8 +15,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/logging"
-	"github.com/iot-for-tillgenglighet/api-temperature/internal/pkg/infrastructure/repositories/models"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/models"
 )
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability

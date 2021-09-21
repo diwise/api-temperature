@@ -25,6 +25,7 @@ type Datastore interface {
 	GetLatestTemperatures() ([]models.Temperature, error)
 	GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error)
+	GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -163,6 +164,40 @@ func (db *myDB) GetLatestTemperatures() ([]models.Temperature, error) {
 	latestTemperatures := []models.Temperature{}
 	db.impl.Table("temperatures").Select("DISTINCT ON (device) *").Where("timestamp2 > ?", queryStart).Order("device, timestamp2 desc").Find(&latestTemperatures)
 	return latestTemperatures, nil
+}
+
+func insertTemporalSQL(gorm *gorm.DB, property string, from, to time.Time) *gorm.DB {
+	if !from.IsZero() {
+		gorm = gorm.Where(fmt.Sprintf("%s >= ?", property), from)
+		if gorm.Error != nil {
+			return gorm
+		}
+	}
+
+	if !to.IsZero() {
+		gorm = gorm.Where(fmt.Sprintf("%s < ?", property), to)
+	}
+
+	return gorm
+}
+
+func (db *myDB) GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error) {
+	temps := []models.Temperature{}
+	gorm := db.impl.Order("timestamp2")
+
+	if !from.IsZero() || !to.IsZero() {
+		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
+		if gorm.Error != nil {
+			return nil, gorm.Error
+		}
+	}
+
+	result := gorm.Limit(int(limit)).Find(&temps)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return temps, nil
 }
 
 func (db *myDB) GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error) {

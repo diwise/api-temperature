@@ -145,6 +145,10 @@ func (db *mockDB) GetTemperaturesWithinRect(latitude0, longitude0, latitude1, lo
 	return db.temps, nil
 }
 
+func (db *mockDB) GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error) {
+	return db.temps, nil
+}
+
 type mockQuery struct {
 	device string
 	attrs  []string
@@ -171,11 +175,19 @@ func (q mockQuery) EntityTypes() []string {
 	return q.types
 }
 
-func (q mockQuery) Geo() *ngsi.GeoQuery {
-	return nil
+func (q mockQuery) Geo() ngsi.GeoQuery {
+	return ngsi.GeoQuery{}
+}
+
+func (q mockQuery) Temporal() ngsi.TemporalQuery {
+	return ngsi.TemporalQuery{}
 }
 
 func (q mockQuery) IsGeoQuery() bool {
+	return false
+}
+
+func (q mockQuery) IsTemporalQuery() bool {
 	return false
 }
 

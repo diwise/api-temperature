@@ -25,3 +25,20 @@ func TestSomething(t *testing.T) {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 0)
 	}
 }
+
+func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
+	log := logging.NewLogger()
+	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+
+	time1 := time.Now().UTC()
+	time2 := time.Now().UTC().Add(2 * time.Hour)
+	time3 := time.Now().UTC().Add(3 * time.Hour)
+
+	deviceName := "mydevice"
+	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time2.Format(time.RFC3339))
+
+	temps, _ := db.GetTemperaturesWithinTimespan(time1, time3, 1)
+	if len(temps) != 1 {
+		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
+	}
+}

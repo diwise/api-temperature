@@ -44,7 +44,11 @@ func convertDatabaseRecordToWeatherObserved(r *models.Temperature) *fiware.Weath
 }
 
 func (cs contextSource) CreateEntity(typeName, entityID string, req ngsi.Request) error {
-	return errors.New("CreateEntity not supported for type " + typeName)
+	return errors.New("create entity not supported for type " + typeName)
+}
+
+func (cs contextSource) GetProvidedTypeFromID(entityID string) (string, error) {
+	return "", errors.New("get provided type from ID is not supported")
 }
 
 func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
@@ -78,10 +82,14 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 		includeWaterTemperature = true
 	}
 
-	if !query.IsGeoQuery() {
+	if !query.IsGeoQuery() && !query.IsTemporalQuery() {
 		temperatures, err = getLatestTemperaturesFrom(cs.db)
-	} else {
-		temperatures, err = getTemperaturesWithGeoQuery(cs.db, query.Geo(), query.PaginationLimit())
+	} else if query.IsGeoQuery() {
+		gq := query.Geo()
+		temperatures, err = getTemperaturesWithGeoQuery(cs.db, &gq, query.PaginationLimit())
+	} else if query.IsTemporalQuery() {
+		tq := query.Temporal()
+		temperatures, err = getTemperaturesWithinTimespan(cs.db, &tq, query.PaginationLimit())
 	}
 
 	if err == nil {
@@ -123,6 +131,11 @@ func (cs contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request
 
 func getLatestTemperaturesFrom(db database.Datastore) ([]models.Temperature, error) {
 	return db.GetLatestTemperatures()
+}
+
+func getTemperaturesWithinTimespan(db database.Datastore, tempQ *ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
+	from, to := tempQ.TimeSpan()
+	return db.GetTemperaturesWithinTimespan(from, to, limit)
 }
 
 func getTemperaturesWithGeoQuery(db database.Datastore, geoQ *ngsi.GeoQuery, limit uint64) ([]models.Temperature, error) {

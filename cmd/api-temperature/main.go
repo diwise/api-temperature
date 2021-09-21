@@ -1,9 +1,11 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/diwise/api-temperature/internal/pkg/application"
-	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/rs/zerolog/log"
 
 	"github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
 
@@ -15,26 +17,25 @@ func main() {
 
 	serviceName := "api-temperature"
 
-	log := logging.NewLogger()
+	logger := log.With().Str("service", strings.ToLower(serviceName)).Logger()
+	logger.Info().Msg("starting up ...")
 
-	log.Infof("Starting up %s ...", serviceName)
-
-	config := messaging.LoadConfiguration(serviceName)
+	config := messaging.LoadConfiguration(serviceName, logger)
 	messenger, _ := messaging.Initialize(config)
 
 	defer messenger.Close()
 
 	// Make sure that we have a proper connection to the database ...
-	db, _ := database.NewDatabaseConnection(log, database.NewPostgreSQLConnector())
+	db, _ := database.NewDatabaseConnection(database.NewPostgreSQLConnector(logger))
 
 	// ... before we start listening for temperature telemetry
 	messenger.RegisterTopicMessageHandler(
 		(&telemetry.Temperature{}).TopicName(),
-		application.NewTemperatureReceiver(log, db),
+		application.NewTemperatureReceiver(db),
 	)
 	messenger.RegisterTopicMessageHandler(
 		(&telemetry.WaterTemperature{}).TopicName(),
-		application.NewWaterTempReceiver(log, db),
+		application.NewWaterTempReceiver(db),
 	)
 
 	messenger.RegisterCommandHandler(
@@ -42,5 +43,5 @@ func main() {
 		application.NewStoreWaterTemperatureCommandHandler(db, messenger),
 	)
 
-	application.CreateRouterAndStartServing(log, db)
+	application.CreateRouterAndStartServing(logger, db)
 }

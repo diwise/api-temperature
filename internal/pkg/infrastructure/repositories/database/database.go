@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net/http"
 	"os"
@@ -15,8 +14,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/models"
+	"github.com/rs/zerolog"
 )
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
@@ -59,6 +58,7 @@ func GetFromContext(ctx context.Context) (Datastore, error) {
 
 type myDB struct {
 	impl *gorm.DB
+	log  zerolog.Logger
 }
 
 func getEnv(key, fallback string) string {
@@ -69,10 +69,10 @@ func getEnv(key, fallback string) string {
 }
 
 //ConnectorFunc is used to inject a database connection method into NewDatabaseConnection
-type ConnectorFunc func() (*gorm.DB, error)
+type ConnectorFunc func() (*gorm.DB, zerolog.Logger, error)
 
 //NewPostgreSQLConnector opens a connection to a postgresql database
-func NewPostgreSQLConnector() ConnectorFunc {
+func NewPostgreSQLConnector(log zerolog.Logger) ConnectorFunc {
 	dbHost := os.Getenv("TEMPERATURE_DB_HOST")
 	username := os.Getenv("TEMPERATURE_DB_USER")
 	dbName := os.Getenv("TEMPERATURE_DB_NAME")
@@ -81,23 +81,36 @@ func NewPostgreSQLConnector() ConnectorFunc {
 
 	dbURI := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=%s password=%s", dbHost, username, dbName, sslMode, password)
 
-	return func() (*gorm.DB, error) {
+	return func() (*gorm.DB, zerolog.Logger, error) {
+		sublogger := log.With().Str("host", dbHost).Str("database", dbName).Logger()
+
 		for {
-			log.Printf("Connecting to database host %s ...\n", dbHost)
-			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{})
+			sublogger.Info().Msg("connecting to database host")
+			db, err := gorm.Open(postgres.Open(dbURI), &gorm.Config{
+				Logger: logger.New(
+					&sublogger,
+					logger.Config{
+						SlowThreshold:             time.Second,
+						LogLevel:                  logger.Info,
+						IgnoreRecordNotFoundError: false,
+						Colorful:                  false,
+					},
+				),
+			})
+
 			if err != nil {
-				log.Fatalf("Failed to connect to database %s \n", err)
+				sublogger.Fatal().Msg("failed to connect to database")
 				time.Sleep(3 * time.Second)
 			} else {
-				return db, nil
+				return db, sublogger, nil
 			}
 		}
 	}
 }
 
 //NewSQLiteConnector opens a connection to a local sqlite database
-func NewSQLiteConnector() ConnectorFunc {
-	return func() (*gorm.DB, error) {
+func NewSQLiteConnector(log zerolog.Logger) ConnectorFunc {
+	return func() (*gorm.DB, zerolog.Logger, error) {
 		db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Silent),
 		})
@@ -106,19 +119,20 @@ func NewSQLiteConnector() ConnectorFunc {
 			db.Exec("PRAGMA foreign_keys = ON")
 		}
 
-		return db, err
+		return db, log, err
 	}
 }
 
 //NewDatabaseConnection initializes a new connection to the database and wraps it in a Datastore
-func NewDatabaseConnection(log logging.Logger, connect ConnectorFunc) (Datastore, error) {
-	impl, err := connect()
+func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
+	impl, log, err := connect()
 	if err != nil {
 		return nil, err
 	}
 
 	db := &myDB{
 		impl: impl.Debug(),
+		log:  log,
 	}
 
 	db.impl.AutoMigrate(&models.Temperature{})

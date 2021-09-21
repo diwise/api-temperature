@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
+	"github.com/rs/zerolog/log"
+
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 )
 
@@ -14,8 +15,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestSomething(t *testing.T) {
-	log := logging.NewLogger()
-	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time.Now().Format(time.RFC3339))
@@ -27,8 +28,8 @@ func TestSomething(t *testing.T) {
 }
 
 func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
-	log := logging.NewLogger()
-	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
 	time1 := time.Now().UTC()
 	time2 := time.Now().UTC().Add(2 * time.Hour)

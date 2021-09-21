@@ -47,10 +47,6 @@ func (cs contextSource) CreateEntity(typeName, entityID string, req ngsi.Request
 	return errors.New("create entity not supported for type " + typeName)
 }
 
-func (cs contextSource) GetProvidedTypeFromID(entityID string) (string, error) {
-	return "", errors.New("get provided type from ID is not supported")
-}
-
 func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
 
 	var temperatures []models.Temperature
@@ -106,6 +102,10 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 	}
 
 	return err
+}
+
+func (cs contextSource) GetProvidedTypeFromID(entityID string) (string, error) {
+	return "", errors.New("not implemented")
 }
 
 func (cs contextSource) ProvidesAttribute(attributeName string) bool {

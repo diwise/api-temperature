@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/rs/zerolog"
 	"github.com/streadway/amqp"
 
-	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 	"github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"
 	"github.com/diwise/messaging-golang/pkg/messaging"
@@ -21,7 +21,7 @@ type MessagingContext interface {
 }
 
 func NewStoreWaterTemperatureCommandHandler(db database.Datastore, messenger MessagingContext) messaging.CommandHandler {
-	return func(wrapper messaging.CommandMessageWrapper) error {
+	return func(wrapper messaging.CommandMessageWrapper, log zerolog.Logger) error {
 		cmd := &commands.StoreWaterTemperatureUpdate{}
 		err := json.Unmarshal(wrapper.Body(), cmd)
 		if err != nil {
@@ -40,21 +40,21 @@ func NewStoreWaterTemperatureCommandHandler(db database.Datastore, messenger Mes
 	}
 }
 
-func NewTemperatureReceiver(log logging.Logger, db database.Datastore) messaging.TopicMessageHandler {
-	return func(msg amqp.Delivery) {
+func NewTemperatureReceiver(db database.Datastore) messaging.TopicMessageHandler {
+	return func(msg amqp.Delivery, log zerolog.Logger) {
 
-		log.Infof("Message received from queue: %s", string(msg.Body))
+		log.Info().Str("body", string(msg.Body)).Msg("message received from queue")
 
 		telTemp := &telemetry.Temperature{}
 		err := json.Unmarshal(msg.Body, telTemp)
 
 		if err != nil {
-			log.Error("Failed to unmarshal message")
+			log.Error().Err(err).Msg("failed to unmarshal message")
 			return
 		}
 
 		if telTemp.Timestamp == "" {
-			log.Info("Ignored temperature message with an empty timestamp.")
+			log.Warn().Msg("ignored temperature message with an empty timestamp")
 			return
 		}
 
@@ -68,21 +68,21 @@ func NewTemperatureReceiver(log logging.Logger, db database.Datastore) messaging
 	}
 }
 
-func NewWaterTempReceiver(log logging.Logger, db database.Datastore) messaging.TopicMessageHandler {
-	return func(msg amqp.Delivery) {
+func NewWaterTempReceiver(db database.Datastore) messaging.TopicMessageHandler {
+	return func(msg amqp.Delivery, log zerolog.Logger) {
 
-		log.Infof("Message received from queue: %s", string(msg.Body))
+		log.Info().Str("body", string(msg.Body)).Msg("message received from queue")
 
 		telTemp := &telemetry.WaterTemperature{}
 		err := json.Unmarshal(msg.Body, telTemp)
 
 		if err != nil {
-			log.Error("Failed to unmarshal message")
+			log.Error().Err(err).Msg("failed to unmarshal message")
 			return
 		}
 
 		if telTemp.Timestamp == "" {
-			log.Info("Ignored water temperature message with an empty timestamp.")
+			log.Warn().Msg("ignored water temperature message with an empty timestamp.")
 			return
 		}
 

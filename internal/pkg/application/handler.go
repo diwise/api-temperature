@@ -14,11 +14,11 @@ import (
 
 	gql "github.com/diwise/api-temperature/internal/pkg/_presentation/api/graphql"
 	fiwarecontext "github.com/diwise/api-temperature/internal/pkg/application/context"
-	"github.com/diwise/api-temperature/internal/pkg/infrastructure/logging"
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 	ngsi "github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
 
 	"github.com/rs/cors"
+	"github.com/rs/zerolog"
 )
 
 //RequestRouter wraps the concrete router implementation
@@ -82,7 +82,7 @@ func createRequestRouter(contextRegistry ngsi.ContextRegistry, db database.Datas
 }
 
 //CreateRouterAndStartServing creates a request router, registers all handlers and starts serving requests
-func CreateRouterAndStartServing(log logging.Logger, db database.Datastore) {
+func CreateRouterAndStartServing(log zerolog.Logger, db database.Datastore) {
 
 	contextRegistry := ngsi.NewContextRegistry()
 	ctxSource := fiwarecontext.CreateSource(db)
@@ -95,7 +95,8 @@ func CreateRouterAndStartServing(log logging.Logger, db database.Datastore) {
 		port = "8880"
 	}
 
-	log.Infof("Starting api-temperature on port %s.\n", port)
+	log.Info().Str("port", port).Msg("starting to listen for connections")
 
-	log.Fatal(http.ListenAndServe(":"+port, router.impl))
+	err := http.ListenAndServe(":"+port, router.impl)
+	log.Fatal().Err(err).Msg("failed to listen for connections")
 }

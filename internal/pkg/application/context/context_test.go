@@ -179,12 +179,12 @@ func (q mockQuery) Geo() ngsi.GeoQuery {
 	return ngsi.GeoQuery{}
 }
 
-func (q mockQuery) Temporal() ngsi.TemporalQuery {
-	return ngsi.TemporalQuery{}
-}
-
 func (q mockQuery) IsGeoQuery() bool {
 	return false
+}
+
+func (q mockQuery) Temporal() ngsi.TemporalQuery {
+	return ngsi.TemporalQuery{}
 }
 
 func (q mockQuery) IsTemporalQuery() bool {

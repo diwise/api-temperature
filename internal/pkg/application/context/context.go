@@ -82,17 +82,14 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 		includeWaterTemperature = true
 	}
 
-	gq := query.Geo()
-	tq := query.Temporal()
-
 	if !query.IsGeoQuery() && !query.IsTemporalQuery() {
 		temperatures, err = getLatestTemperaturesFrom(cs.db)
 	} else if query.IsGeoQuery() && !query.IsTemporalQuery() {
-		temperatures, err = getTemperaturesWithGeoQuery(cs.db, &gq, query.PaginationLimit())
+		temperatures, err = getTemperaturesWithGeoQuery(cs.db, query.Geo(), query.PaginationLimit())
 	} else if query.IsTemporalQuery() && !query.IsGeoQuery() {
-		temperatures, err = getTemperaturesWithinTimespan(cs.db, &tq, query.PaginationLimit())
+		temperatures, err = getTemperaturesWithinTimespan(cs.db, query.Temporal(), query.PaginationLimit())
 	} else if query.IsGeoQuery() && query.IsTemporalQuery() {
-		temperatures, err = getTemperaturesAtTimeAndPlace(cs.db, &gq, &tq, query.PaginationLimit())
+		temperatures, err = getTemperaturesAtTimeAndPlace(cs.db, query.Geo(), query.Temporal(), query.PaginationLimit())
 	}
 
 	if err == nil {
@@ -136,30 +133,30 @@ func getLatestTemperaturesFrom(db database.Datastore) ([]models.Temperature, err
 	return db.GetLatestTemperatures()
 }
 
-func getTemperaturesWithinTimespan(db database.Datastore, tempQ *ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
+func getTemperaturesWithinTimespan(db database.Datastore, tempQ ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
 	from, to := tempQ.TimeSpan()
 	return db.GetTemperaturesWithinTimespan(from, to, limit)
 }
 
-func getTemperaturesAtTimeAndPlace(db database.Datastore, geoQ *ngsi.GeoQuery, tempQ *ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
+func getTemperaturesAtTimeAndPlace(db database.Datastore, geoQ ngsi.GeoQuery, tempQ ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
 	from, to := tempQ.TimeSpan()
 
 	if geoQ.GeoRel == ngsi.GeoSpatialRelationNearPoint {
 		lon, lat, _ := geoQ.Point()
 		distance, _ := geoQ.Distance()
-		return db.GetTemperaturesNearPointAtTime(from, to, lat, lon, uint64(distance), limit)
+		return db.GetTemperaturesNearPointAtTime(lat, lon, uint64(distance), limit, from, to)
 	} else if geoQ.GeoRel == ngsi.GeoSpatialRelationWithinRect {
 		lon0, lat0, lon1, lat1, err := geoQ.Rectangle()
 		if err != nil {
 			return nil, err
 		}
-		return db.GetTemperaturesWithinRectangleAtTime(from, to, lat0, lon0, lat1, lon1, limit)
+		return db.GetTemperaturesWithinRectangleAtTime(lat0, lon0, lat1, lon1, limit, from, to)
 	}
 
 	return nil, fmt.Errorf("geo query relation %s is not supported", geoQ.GeoRel)
 }
 
-func getTemperaturesWithGeoQuery(db database.Datastore, geoQ *ngsi.GeoQuery, limit uint64) ([]models.Temperature, error) {
+func getTemperaturesWithGeoQuery(db database.Datastore, geoQ ngsi.GeoQuery, limit uint64) ([]models.Temperature, error) {
 
 	if geoQ.GeoRel == ngsi.GeoSpatialRelationNearPoint {
 		lon, lat, _ := geoQ.Point()

@@ -57,7 +57,7 @@ func TestGettingTemperaturesNearPointAtTimeWorks(t *testing.T) {
 	deviceName := "mydevice2"
 	db.AddTemperatureMeasurement(&deviceName, lat, lon, 12.7, false, time2.Format(time.RFC3339))
 
-	temps, _ := db.GetTemperaturesNearPointAtTime(from, to, lat, lon, 1, 1)
+	temps, _ := db.GetTemperaturesNearPointAtTime(lat, lon, 1, 1, from, to)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
@@ -81,7 +81,7 @@ func TestGettingTemperaturesWithinRectangleAtTimeWorks(t *testing.T) {
 	deviceName := "mydevice3"
 	db.AddTemperatureMeasurement(&deviceName, lat1, lon1, 12.7, false, time2.Format(time.RFC3339))
 
-	temps, _ := db.GetTemperaturesWithinRectangleAtTime(from, to, lat2, lon0, lat0, lon2, 1)
+	temps, _ := db.GetTemperaturesWithinRectangleAtTime(lat2, lon0, lat0, lon2, 1, from, to)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}

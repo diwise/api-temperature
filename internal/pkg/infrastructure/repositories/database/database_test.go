@@ -45,8 +45,8 @@ func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
 }
 
 func TestGettingTemperaturesNearPointAtTimeWorks(t *testing.T) {
-	log := logging.NewLogger()
-	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
 	from := time.Now().UTC()
 	time2 := time.Now().UTC().Add(2 * time.Hour)
@@ -65,8 +65,8 @@ func TestGettingTemperaturesNearPointAtTimeWorks(t *testing.T) {
 }
 
 func TestGettingTemperaturesWithinRectangleAtTimeWorks(t *testing.T) {
-	log := logging.NewLogger()
-	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
 	from := time.Now().UTC()
 	time2 := time.Now().UTC().Add(2 * time.Hour)

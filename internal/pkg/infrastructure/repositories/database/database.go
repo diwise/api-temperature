@@ -24,7 +24,9 @@ type Datastore interface {
 	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error)
 	GetLatestTemperatures() ([]models.Temperature, error)
 	GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
+	GetTemperaturesNearPointAtTime(from, to time.Time, latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error)
+	GetTemperaturesWithinRectangleAtTime(from, to time.Time, nw_lat, nw_lon, se_lat, se_lon float64, limit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error)
 }
 
@@ -201,19 +203,35 @@ func (db *myDB) GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) 
 }
 
 func (db *myDB) GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error) {
-	// Make a crude estimation of the coordinate offset based on the distance
-	d := float64(distance)
-	lat_delta := (180.0 / math.Pi) * (d / 6378137.0)
-	lon_delta := (180.0 / math.Pi) * (d / 6378137.0) / math.Cos(math.Pi/180.0*latitude)
 
-	nw_lat := latitude + lat_delta
-	nw_lon := longitude - lon_delta
-	se_lat := latitude - lat_delta
-	se_lon := longitude + lon_delta
+	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(latitude, longitude, distance)
 
-	// TODO: This is not correct, but a good enough first approximation for the MVP. We should make use of PostGIS
-	// and do a correct search for matches within a radius. Not within a "square" like this.
 	return db.GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon, resultLimit)
+}
+
+func (db *myDB) GetTemperaturesNearPointAtTime(from, to time.Time, latitude, longitude float64, distance, limit uint64) ([]models.Temperature, error) {
+	temperatures := []models.Temperature{}
+
+	gorm := db.impl.Order("timestamp2")
+
+	if !from.IsZero() || !to.IsZero() {
+		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
+		if gorm.Error != nil {
+			return nil, gorm.Error
+		}
+
+		nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(latitude, longitude, distance)
+
+		result := gorm.Where(
+			"latitude > ? AND latitude < ? AND longitude > ? AND longitude < ?",
+			se_lat, nw_lat, nw_lon, se_lon,
+		).Limit(int(limit)).Find(&temperatures)
+		if result.Error != nil {
+			return nil, result.Error
+		}
+	}
+
+	return temperatures, nil
 }
 
 func (db *myDB) GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon float64, resultLimit uint64) ([]models.Temperature, error) {
@@ -229,4 +247,43 @@ func (db *myDB) GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon float64
 	}
 
 	return temperatures, nil
+}
+
+func (db *myDB) GetTemperaturesWithinRectangleAtTime(from, to time.Time, nw_lat, nw_lon, se_lat, se_lon float64, limit uint64) ([]models.Temperature, error) {
+	temperatures := []models.Temperature{}
+
+	gorm := db.impl.Order("timestamp2")
+
+	if !from.IsZero() || !to.IsZero() {
+		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
+		if gorm.Error != nil {
+			return nil, gorm.Error
+		}
+
+		result := gorm.Where(
+			"latitude > ? AND latitude < ? AND longitude > ? AND longitude < ?",
+			se_lat, nw_lat, nw_lon, se_lon,
+		).Limit(int(limit)).Find(&temperatures)
+		if result.Error != nil {
+			return nil, result.Error
+		}
+	}
+
+	return temperatures, nil
+}
+
+func getApproximatePoint(latitude, longitude float64, distance uint64) (nwLat, neLon, seLat, seLon float64) {
+	// Make a crude estimation of the coordinate offset based on the distance
+	d := float64(distance)
+	lat_delta := (180.0 / math.Pi) * (d / 6378137.0)
+	lon_delta := (180.0 / math.Pi) * (d / 6378137.0) / math.Cos(math.Pi/180.0*latitude)
+
+	nw_lat := latitude + lat_delta
+	nw_lon := longitude - lon_delta
+	se_lat := latitude - lat_delta
+	se_lon := longitude + lon_delta
+
+	// TODO: This is not correct, but a good enough first approximation for the MVP. We should make use of PostGIS
+	// and do a correct search for matches within a radius. Not within a "square" like this.
+	return nw_lat, nw_lon, se_lat, se_lon
 }

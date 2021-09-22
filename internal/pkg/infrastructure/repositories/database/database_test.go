@@ -42,3 +42,47 @@ func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
 }
+
+func TestGettingTemperaturesNearPointAtTimeWorks(t *testing.T) {
+	log := logging.NewLogger()
+	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+
+	from := time.Now().UTC()
+	time2 := time.Now().UTC().Add(2 * time.Hour)
+	to := time.Now().UTC().Add(2 * time.Hour)
+
+	lat := 64.278
+	lon := 17.182
+
+	deviceName := "mydevice2"
+	db.AddTemperatureMeasurement(&deviceName, lat, lon, 12.7, false, time2.Format(time.RFC3339))
+
+	temps, _ := db.GetTemperaturesNearPointAtTime(from, to, lat, lon, 1, 1)
+	if len(temps) != 1 {
+		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
+	}
+}
+
+func TestGettingTemperaturesWithinRectangleAtTimeWorks(t *testing.T) {
+	log := logging.NewLogger()
+	db, _ := database.NewDatabaseConnection(log, database.NewSQLiteConnector())
+
+	from := time.Now().UTC()
+	time2 := time.Now().UTC().Add(2 * time.Hour)
+	to := time.Now().UTC().Add(3 * time.Hour)
+
+	lat0 := 62.278
+	lon0 := 17.182
+	lat1 := 62.383
+	lon1 := 17.382
+	lat2 := 62.4354
+	lon2 := 17.4748
+
+	deviceName := "mydevice3"
+	db.AddTemperatureMeasurement(&deviceName, lat1, lon1, 12.7, false, time2.Format(time.RFC3339))
+
+	temps, _ := db.GetTemperaturesWithinRectangleAtTime(from, to, lat2, lon0, lat0, lon2, 1)
+	if len(temps) != 1 {
+		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
+	}
+}

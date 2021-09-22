@@ -141,7 +141,7 @@ func (db *mockDB) GetTemperaturesNearPoint(latitude, longitude float64, distance
 	return db.temps, nil
 }
 
-func (db *mockDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance, resultLimit uint64, from, to time.Time) ([]models.Temperature, error) {
+func (db *mockDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error) {
 	return db.temps, nil
 }
 
@@ -149,7 +149,7 @@ func (db *mockDB) GetTemperaturesWithinRect(latitude0, longitude0, latitude1, lo
 	return db.temps, nil
 }
 
-func (db *mockDB) GetTemperaturesWithinRectangleAtTime(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64, from, to time.Time) ([]models.Temperature, error) {
+func (db *mockDB) GetTemperaturesWithinRectangleAtTime(latitude0, longitude0, latitude1, longitude1 float64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error) {
 	return db.temps, nil
 }
 

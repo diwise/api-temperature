@@ -24,9 +24,9 @@ type Datastore interface {
 	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error)
 	GetLatestTemperatures() ([]models.Temperature, error)
 	GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
-	GetTemperaturesNearPointAtTime(latitude, longitude float64, distance, resultLimit uint64, from, to time.Time) ([]models.Temperature, error)
+	GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error)
-	GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, limit uint64, from, to time.Time) ([]models.Temperature, error)
+	GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, from, to time.Time, limit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error)
 }
 
@@ -208,10 +208,10 @@ func (db *myDB) GetTemperaturesNearPoint(latitude, longitude float64, distance, 
 	return db.GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon, resultLimit)
 }
 
-func (db *myDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance, limit uint64, from, to time.Time) ([]models.Temperature, error) {
+func (db *myDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, limit uint64) ([]models.Temperature, error) {
 	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(latitude, longitude, distance)
 
-	temperatures, err := db.GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon, limit, from, to)
+	temperatures, err := db.GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon, from, to, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get temperatures from this time and place: %s", err.Error())
 	}
@@ -234,7 +234,7 @@ func (db *myDB) GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon float64
 	return temperatures, nil
 }
 
-func (db *myDB) GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, limit uint64, from, to time.Time) ([]models.Temperature, error) {
+func (db *myDB) GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, from, to time.Time, limit uint64) ([]models.Temperature, error) {
 	temperatures := []models.Temperature{}
 
 	gorm := db.impl.Order("timestamp2")

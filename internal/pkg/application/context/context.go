@@ -144,13 +144,13 @@ func getTemperaturesAtTimeAndPlace(db database.Datastore, geoQ ngsi.GeoQuery, te
 	if geoQ.GeoRel == ngsi.GeoSpatialRelationNearPoint {
 		lon, lat, _ := geoQ.Point()
 		distance, _ := geoQ.Distance()
-		return db.GetTemperaturesNearPointAtTime(lat, lon, uint64(distance), limit, from, to)
+		return db.GetTemperaturesNearPointAtTime(lat, lon, uint64(distance), from, to, limit)
 	} else if geoQ.GeoRel == ngsi.GeoSpatialRelationWithinRect {
 		lon0, lat0, lon1, lat1, err := geoQ.Rectangle()
 		if err != nil {
 			return nil, err
 		}
-		return db.GetTemperaturesWithinRectangleAtTime(lat0, lon0, lat1, lon1, limit, from, to)
+		return db.GetTemperaturesWithinRectangleAtTime(lat0, lon0, lat1, lon1, from, to, limit)
 	}
 
 	return nil, fmt.Errorf("geo query relation %s is not supported", geoQ.GeoRel)

@@ -2,7 +2,6 @@ package application
 
 import (
 	"encoding/json"
-	"fmt"
 	"math"
 
 	"github.com/rs/zerolog"
@@ -20,12 +19,39 @@ type MessagingContext interface {
 	NoteToSelf(message messaging.CommandMessage) error
 }
 
+func NewStoreTemperatureCommandHandler(db database.Datastore, messenger MessagingContext) messaging.CommandHandler {
+	return func(wrapper messaging.CommandMessageWrapper, log zerolog.Logger) error {
+
+		cmd := &commands.StoreTemperatureUpdate{}
+		err := json.Unmarshal(wrapper.Body(), cmd)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to unmarshal command")
+			return err
+		}
+
+		_, err = db.AddTemperatureMeasurement(
+			&cmd.Origin.Device,
+			cmd.Origin.Latitude, cmd.Origin.Longitude,
+			float64(math.Round(cmd.Temp*10)/10),
+			false,
+			cmd.Timestamp,
+		)
+
+		if err != nil {
+			log.Error().Err(err).Msg("failed to add temperature management")
+		}
+
+		return err
+	}
+}
+
 func NewStoreWaterTemperatureCommandHandler(db database.Datastore, messenger MessagingContext) messaging.CommandHandler {
 	return func(wrapper messaging.CommandMessageWrapper, log zerolog.Logger) error {
 		cmd := &commands.StoreWaterTemperatureUpdate{}
 		err := json.Unmarshal(wrapper.Body(), cmd)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal command! %s", err.Error())
+			log.Error().Err(err).Msg("failed to unmarshal command")
+			return err
 		}
 
 		_, err = db.AddTemperatureMeasurement(
@@ -35,6 +61,10 @@ func NewStoreWaterTemperatureCommandHandler(db database.Datastore, messenger Mes
 			true,
 			cmd.Timestamp,
 		)
+
+		if err != nil {
+			log.Error().Err(err).Msg("failed to add temperature management")
+		}
 
 		return err
 	}
@@ -58,13 +88,17 @@ func NewTemperatureReceiver(db database.Datastore) messaging.TopicMessageHandler
 			return
 		}
 
-		db.AddTemperatureMeasurement(
+		_, err = db.AddTemperatureMeasurement(
 			&telTemp.Origin.Device,
 			telTemp.Origin.Latitude, telTemp.Origin.Longitude,
 			float64(math.Round(telTemp.Temp*10)/10),
 			false,
 			telTemp.Timestamp,
 		)
+
+		if err != nil {
+			log.Error().Err(err).Msg("failed to add temperature management")
+		}
 	}
 }
 
@@ -86,12 +120,16 @@ func NewWaterTempReceiver(db database.Datastore) messaging.TopicMessageHandler {
 			return
 		}
 
-		db.AddTemperatureMeasurement(
+		_, err = db.AddTemperatureMeasurement(
 			&telTemp.Origin.Device,
 			telTemp.Origin.Latitude, telTemp.Origin.Longitude,
 			float64(math.Round(telTemp.Temp*10)/10),
 			true,
 			telTemp.Timestamp,
 		)
+
+		if err != nil {
+			log.Error().Err(err).Msg("failed to add temperature management")
+		}
 	}
 }

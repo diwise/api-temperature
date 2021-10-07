@@ -39,6 +39,11 @@ func main() {
 	)
 
 	messenger.RegisterCommandHandler(
+		commands.StoreTemperatureUpdateType,
+		application.NewStoreTemperatureCommandHandler(db, messenger),
+	)
+
+	messenger.RegisterCommandHandler(
 		commands.StoreWaterTemperatureUpdateType,
 		application.NewStoreWaterTemperatureCommandHandler(db, messenger),
 	)

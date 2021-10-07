@@ -164,6 +164,14 @@ func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, t
 
 	if device != nil {
 		measurement.Device = *device
+
+		// Temporary stop gap to reduce the number of duplicates stored
+		// If we can find a record with the same time and device, then we should not create yet another one
+		stored := &models.Temperature{Device: *device, Timestamp2: ts, Water: water}
+		result := db.impl.Where(stored).First(&stored)
+		if result.Error == nil {
+			return nil, fmt.Errorf("temperature already added for %s at %s", *device, when)
+		}
 	}
 
 	db.impl.Create(measurement)

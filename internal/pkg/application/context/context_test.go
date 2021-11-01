@@ -112,6 +112,25 @@ func TestGetEntitiesFromAttributeList(t *testing.T) {
 	}
 }
 
+func TestGetEntitiesWithDeviceQuery(t *testing.T) {
+	src := context.CreateSource(db)
+
+	callbackCount := 0
+	const callbackExpectation = 2
+	callback := func(e ngsi.Entity) error {
+		callbackCount++
+		return nil
+	}
+
+	if err := src.GetEntities(newMockQueryForDevice("deviceID", []string{"WeatherObserved"}), callback); err != nil {
+		t.Error("Unexpected error when calling GetEntities. ", err.Error())
+	}
+
+	if callbackCount != callbackExpectation {
+		t.Error("Unexpected number of callbacks made. ", callbackCount, " != ", callbackExpectation)
+	}
+}
+
 func TestGetEntitiesOfUnknownTypeReturnsError(t *testing.T) {
 	src := context.CreateSource(nil)
 	if src.GetEntities(newMockQueryForTypes([]string{"UnknownType"}), nil) == nil {
@@ -145,6 +164,10 @@ func (db *mockDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, di
 	return db.temps, nil
 }
 
+func (db *mockDB) GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error) {
+	return db.temps, nil
+}
+
 func (db *mockDB) GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error) {
 	return db.temps, nil
 }
@@ -169,6 +192,10 @@ func newMockQueryForAttributes(attributeNames []string) mockQuery {
 
 func newMockQueryForTypes(typeNames []string) mockQuery {
 	return mockQuery{types: typeNames}
+}
+
+func newMockQueryForDevice(deviceName string, typeNames []string) mockQuery {
+	return mockQuery{device: deviceName, types: typeNames}
 }
 
 func (q mockQuery) Device() string {

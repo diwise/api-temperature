@@ -24,6 +24,7 @@ type Datastore interface {
 	GetLatestTemperatures() ([]models.Temperature, error)
 	GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
 	GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error)
+	GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error)
 	GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, from, to time.Time, limit uint64) ([]models.Temperature, error)
 	GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error)
@@ -169,6 +170,14 @@ func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, t
 	db.impl.Create(measurement)
 
 	return measurement, nil
+}
+
+func (db *myDB) GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error) {
+	queryStart := time.Now().UTC().AddDate(0, 0, -1).Format(time.RFC3339)
+
+	temperatures := []models.Temperature{}
+	db.impl.Table("temperatures").Where("device = ? AND timestamp > ?", deviceID, queryStart).Find(&temperatures)
+	return temperatures, nil
 }
 
 //GetLatestTemperatures returns the most recent value for all temp sensors that

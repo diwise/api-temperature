@@ -78,7 +78,10 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 		includeWaterTemperature = true
 	}
 
-	if !query.IsGeoQuery() && !query.IsTemporalQuery() {
+	if query.HasDeviceReference() {
+		deviceID := strings.TrimPrefix(query.Device(), fiware.DeviceIDPrefix)
+		temperatures, err = getTemperaturesWithDeviceID(cs.db, deviceID)
+	} else if !query.IsGeoQuery() && !query.IsTemporalQuery() {
 		temperatures, err = getLatestTemperaturesFrom(cs.db)
 	} else if query.IsGeoQuery() && !query.IsTemporalQuery() {
 		temperatures, err = getTemperaturesWithGeoQuery(cs.db, query.Geo(), query.PaginationLimit())
@@ -131,6 +134,10 @@ func (cs contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request
 
 func getLatestTemperaturesFrom(db database.Datastore) ([]models.Temperature, error) {
 	return db.GetLatestTemperatures()
+}
+
+func getTemperaturesWithDeviceID(db database.Datastore, deviceID string) ([]models.Temperature, error) {
+	return db.GetTemperaturesWithDeviceID(deviceID)
 }
 
 func getTemperaturesWithinTimespan(db database.Datastore, tempQ ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {

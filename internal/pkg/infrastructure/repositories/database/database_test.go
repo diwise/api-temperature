@@ -27,6 +27,19 @@ func TestSomething(t *testing.T) {
 	}
 }
 
+func TestThatGettingTemperatureByDeviceIDWorks(t *testing.T) {
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
+
+	deviceName := "mydevice"
+	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time.Now().Format(time.RFC3339))
+
+	temps, _ := db.GetTemperaturesWithDeviceID(deviceName)
+	if len(temps) != 0 {
+		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 0)
+	}
+}
+
 func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
 	log := log.Logger
 	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))

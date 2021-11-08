@@ -1,6 +1,7 @@
 package database_test
 
 import (
+	"math"
 	"os"
 	"testing"
 	"time"
@@ -8,39 +9,14 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
+	"github.com/diwise/ngsi-ld-golang/pkg/ngsi-ld"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestSomething(t *testing.T) {
-	log := log.Logger
-	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
-
-	deviceName := "mydevice"
-	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time.Now().Format(time.RFC3339))
-
-	temps, _ := db.GetTemperaturesNearPoint(62.389517, 17.306133, 1000, 5)
-	if len(temps) != 0 {
-		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 0)
-	}
-}
-
-func TestThatGettingTemperatureByDeviceIDWorks(t *testing.T) {
-	log := log.Logger
-	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
-
-	deviceName := "mydevice"
-	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time.Now().Format(time.RFC3339))
-
-	temps, _ := db.GetTemperaturesWithDeviceID(deviceName)
-	if len(temps) != 0 {
-		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 0)
-	}
-}
-
-func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
+func TestThatGetTemperaturesWorksWithDeviceIDAndTimeSpan(t *testing.T) {
 	log := log.Logger
 	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
@@ -51,52 +27,73 @@ func TestThatGettingTemperaturesByTimespanWorks(t *testing.T) {
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time2.Format(time.RFC3339))
 
-	temps, _ := db.GetTemperaturesWithinTimespan(time1, time3, 1)
+	temps, _ := db.GetTemperatures(deviceName, time1, time3, "", 0.0, 0.0, 0.0, 0.0, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
 }
 
-func TestGettingTemperaturesNearPointAtTimeWorks(t *testing.T) {
+func TestThatGetTemperaturesWorksWithTimeSpanAndNearPoint(t *testing.T) {
 	log := log.Logger
 	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
-	from := time.Now().UTC()
+	time1 := time.Now().UTC()
 	time2 := time.Now().UTC().Add(2 * time.Hour)
-	to := time.Now().UTC().Add(2 * time.Hour)
+	time3 := time.Now().UTC().Add(3 * time.Hour)
 
-	lat := 64.278
-	lon := 17.182
+	deviceName := "mydevice"
+	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time2.Format(time.RFC3339))
 
-	deviceName := "mydevice2"
-	db.AddTemperatureMeasurement(&deviceName, lat, lon, 12.7, false, time2.Format(time.RFC3339))
+	geoQ := ngsi.GeoQuery{
+		Coordinates: []float64{64.2775, 17.1815},
+		GeoRel:      "near",
+	}
 
-	temps, _ := db.GetTemperaturesNearPointAtTime(lat, lon, 1, from, to, 1)
+	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(geoQ.Coordinates[0], geoQ.Coordinates[1], 1000)
+
+	temps, _ := db.GetTemperatures("", time1, time3, geoQ.GeoRel, nw_lat, nw_lon, se_lat, se_lon, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
 }
 
-func TestGettingTemperaturesWithinRectangleAtTimeWorks(t *testing.T) {
+func TestThatGetTemperaturesWorksWithTimeSpanAndWithinRectangle(t *testing.T) {
 	log := log.Logger
 	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
 
-	from := time.Now().UTC()
+	time1 := time.Now().UTC()
 	time2 := time.Now().UTC().Add(2 * time.Hour)
-	to := time.Now().UTC().Add(3 * time.Hour)
+	time3 := time.Now().UTC().Add(3 * time.Hour)
 
-	lat0 := 62.278
-	lon0 := 17.182
-	lat1 := 62.383
-	lon1 := 17.382
-	lat2 := 62.4354
-	lon2 := 17.4748
+	deviceName := "mydevice"
+	db.AddTemperatureMeasurement(&deviceName, 63.278, 17.185, 12.7, true, time2.Format(time.RFC3339))
 
-	deviceName := "mydevice3"
-	db.AddTemperatureMeasurement(&deviceName, lat1, lon1, 12.7, false, time2.Format(time.RFC3339))
+	geoQ := ngsi.GeoQuery{
+		Coordinates: []float64{64.2775, 17.1815, 62.4354, 17.4748},
+		GeoRel:      "within",
+	}
 
-	temps, _ := db.GetTemperaturesWithinRectangleAtTime(lat2, lon0, lat0, lon2, from, to, 1)
+	nw_lat, nw_lon := geoQ.Coordinates[0], geoQ.Coordinates[1]
+	se_lat, se_lon := geoQ.Coordinates[2], geoQ.Coordinates[3]
+
+	temps, _ := db.GetTemperatures("", time1, time3, geoQ.GeoRel, nw_lat, nw_lon, se_lat, se_lon, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
+}
+
+func getApproximatePoint(latitude, longitude float64, distance uint64) (nwLat, neLon, seLat, seLon float64) {
+	// Make a crude estimation of the coordinate offset based on the distance
+	d := float64(distance)
+	lat_delta := (180.0 / math.Pi) * (d / 6378137.0)
+	lon_delta := (180.0 / math.Pi) * (d / 6378137.0) / math.Cos(math.Pi/180.0*latitude)
+
+	nw_lat := latitude + lat_delta
+	nw_lon := longitude - lon_delta
+	se_lat := latitude - lat_delta
+	se_lon := longitude + lon_delta
+
+	// TODO: This is not correct, but a good enough first approximation for the MVP. We should make use of PostGIS
+	// and do a correct search for matches within a radius. Not within a "square" like this.
+	return nw_lat, nw_lon, se_lat, se_lon
 }

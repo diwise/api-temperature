@@ -78,17 +78,9 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 		includeWaterTemperature = true
 	}
 
-	if query.HasDeviceReference() {
-		deviceID := strings.TrimPrefix(query.Device(), fiware.DeviceIDPrefix)
-		temperatures, err = getTemperaturesWithDeviceID(cs.db, deviceID)
-	} else if !query.IsGeoQuery() && !query.IsTemporalQuery() {
-		temperatures, err = getLatestTemperaturesFrom(cs.db)
-	} else if query.IsGeoQuery() && !query.IsTemporalQuery() {
-		temperatures, err = getTemperaturesWithGeoQuery(cs.db, query.Geo(), query.PaginationLimit())
-	} else if query.IsTemporalQuery() && !query.IsGeoQuery() {
-		temperatures, err = getTemperaturesWithinTimespan(cs.db, query.Temporal(), query.PaginationLimit())
-	} else if query.IsGeoQuery() && query.IsTemporalQuery() {
-		temperatures, err = getTemperaturesAtTimeAndPlace(cs.db, query.Geo(), query.Temporal(), query.PaginationLimit())
+	temperatures, err = getTemperatures(cs.db, query)
+	if err != nil {
+		return fmt.Errorf("something went wrong when retrieving temperatures from database: %s", err)
 	}
 
 	if err == nil {
@@ -132,52 +124,40 @@ func (cs contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request
 	return errors.New("UpdateEntityAttributes is not supported by this service")
 }
 
-func getLatestTemperaturesFrom(db database.Datastore) ([]models.Temperature, error) {
-	return db.GetLatestTemperatures()
-}
-
-func getTemperaturesWithDeviceID(db database.Datastore, deviceID string) ([]models.Temperature, error) {
-	return db.GetTemperaturesWithDeviceID(deviceID)
-}
-
-func getTemperaturesWithinTimespan(db database.Datastore, tempQ ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
-	from, to := tempQ.TimeSpan()
-	return db.GetTemperaturesWithinTimespan(from, to, limit)
-}
-
-func getTemperaturesAtTimeAndPlace(db database.Datastore, geoQ ngsi.GeoQuery, tempQ ngsi.TemporalQuery, limit uint64) ([]models.Temperature, error) {
-	from, to := tempQ.TimeSpan()
-
-	if geoQ.GeoRel == ngsi.GeoSpatialRelationNearPoint {
-		lon, lat, _ := geoQ.Point()
-		distance, _ := geoQ.Distance()
-		return db.GetTemperaturesNearPointAtTime(lat, lon, uint64(distance), from, to, limit)
-	} else if geoQ.GeoRel == ngsi.GeoSpatialRelationWithinRect {
-		lon0, lat0, lon1, lat1, err := geoQ.Rectangle()
-		if err != nil {
-			return nil, err
-		}
-		return db.GetTemperaturesWithinRectangleAtTime(lat0, lon0, lat1, lon1, from, to, limit)
+func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.Temperature, error) {
+	deviceID := ""
+	if query.Device() != "" {
+		deviceID = strings.TrimPrefix(query.Device(), fiware.DeviceIDPrefix)
 	}
 
-	return nil, fmt.Errorf("geo query relation %s is not supported", geoQ.GeoRel)
-}
-
-func getTemperaturesWithGeoQuery(db database.Datastore, geoQ ngsi.GeoQuery, limit uint64) ([]models.Temperature, error) {
-
-	if geoQ.GeoRel == ngsi.GeoSpatialRelationNearPoint {
-		lon, lat, _ := geoQ.Point()
-		distance, _ := geoQ.Distance()
-		return db.GetTemperaturesNearPoint(lat, lon, uint64(distance), limit)
-	} else if geoQ.GeoRel == ngsi.GeoSpatialRelationWithinRect {
-		lon0, lat0, lon1, lat1, err := geoQ.Rectangle()
-		if err != nil {
-			return nil, err
-		}
-		return db.GetTemperaturesWithinRect(lat0, lon0, lat1, lon1, limit)
+	// get temperatures from past 24 hours by default
+	from := time.Now().UTC().AddDate(0, 0, -1)
+	to := time.Now().UTC()
+	if query.IsTemporalQuery() {
+		from, to = query.Temporal().TimeSpan()
 	}
 
-	return nil, fmt.Errorf("geo query relation %s is not supported", geoQ.GeoRel)
+	limit := query.PaginationLimit()
+
+	if query.IsGeoQuery() {
+		geo := query.Geo()
+		if geo.GeoRel == ngsi.GeoSpatialRelationNearPoint {
+			lon, lat, _ := geo.Point()
+			distance, _ := geo.Distance()
+
+			nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(lat, lon, uint64(distance))
+
+			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, limit)
+		} else if geo.GeoRel == ngsi.GeoSpatialRelationWithinRect {
+			nw_lat, nw_lon, se_lat, se_lon, err := geo.Rectangle()
+			if err != nil {
+				return nil, err
+			}
+			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, limit)
+		}
+	}
+
+	return db.GetTemperatures(deviceID, from, to, "", 0.0, 0.0, 0.0, 0.0, query.PaginationLimit())
 }
 
 func queriedAttributesDoNotInclude(attributes []string, requiredAttribute string) bool {
@@ -188,4 +168,20 @@ func queriedAttributesDoNotInclude(attributes []string, requiredAttribute string
 	}
 
 	return true
+}
+
+func getApproximatePoint(latitude, longitude float64, distance uint64) (nwLat, neLon, seLat, seLon float64) {
+	// Make a crude estimation of the coordinate offset based on the distance
+	d := float64(distance)
+	lat_delta := (180.0 / math.Pi) * (d / 6378137.0)
+	lon_delta := (180.0 / math.Pi) * (d / 6378137.0) / math.Cos(math.Pi/180.0*latitude)
+
+	nw_lat := latitude + lat_delta
+	nw_lon := longitude - lon_delta
+	se_lat := latitude - lat_delta
+	se_lon := longitude + lon_delta
+
+	// TODO: This is not correct, but a good enough first approximation for the MVP. We should make use of PostGIS
+	// and do a correct search for matches within a radius. Not within a "square" like this.
+	return nw_lat, nw_lon, se_lat, se_lon
 }

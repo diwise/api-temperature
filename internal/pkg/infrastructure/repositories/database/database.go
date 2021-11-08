@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"os"
 	"time"
@@ -21,13 +20,7 @@ import (
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
 type Datastore interface {
 	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error)
-	GetLatestTemperatures() ([]models.Temperature, error)
-	GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error)
-	GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error)
-	GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error)
-	GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error)
-	GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, from, to time.Time, limit uint64) ([]models.Temperature, error)
-	GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error)
+	GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.Temperature, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -172,23 +165,31 @@ func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, t
 	return measurement, nil
 }
 
-func (db *myDB) GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error) {
-	queryStart := time.Now().UTC().AddDate(0, 0, -1).Format(time.RFC3339)
+func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.Temperature, error) {
+	temps := []models.Temperature{}
+	gorm := db.impl.Order("timestamp2")
 
-	temperatures := []models.Temperature{}
-	db.impl.Table("temperatures").Where("device = ? AND timestamp > ?", deviceID, queryStart).Find(&temperatures)
-	return temperatures, nil
-}
+	if deviceId != "" {
+		gorm = gorm.Where("device = ?", deviceId)
+	}
 
-//GetLatestTemperatures returns the most recent value for all temp sensors that
-//have reported a value during the last 6 hours
-func (db *myDB) GetLatestTemperatures() ([]models.Temperature, error) {
-	// Get temperatures from the last 6 hours
-	queryStart := time.Now().UTC().Add(time.Hour * -6)
+	if !from.IsZero() || !to.IsZero() {
+		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
+		if gorm.Error != nil {
+			return nil, gorm.Error
+		}
+	}
 
-	latestTemperatures := []models.Temperature{}
-	db.impl.Table("temperatures").Select("DISTINCT ON (device) *").Where("timestamp2 > ?", queryStart).Order("device, timestamp2 desc").Find(&latestTemperatures)
-	return latestTemperatures, nil
+	if geoSpatial != "" {
+		gorm = insertGeoSQL(gorm, lat0, lon0, lat1, lon1)
+	}
+
+	result := gorm.Limit(int(resultLimit)).Find(&temps)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return temps, nil
 }
 
 func insertTemporalSQL(gorm *gorm.DB, property string, from, to time.Time) *gorm.DB {
@@ -206,93 +207,12 @@ func insertTemporalSQL(gorm *gorm.DB, property string, from, to time.Time) *gorm
 	return gorm
 }
 
-func (db *myDB) GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error) {
-	temps := []models.Temperature{}
-	gorm := db.impl.Order("timestamp2")
-
-	if !from.IsZero() || !to.IsZero() {
-		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
-		if gorm.Error != nil {
-			return nil, gorm.Error
-		}
-	}
-
-	result := gorm.Limit(int(limit)).Find(&temps)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return temps, nil
-}
-
-func (db *myDB) GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error) {
-	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(latitude, longitude, distance)
-
-	return db.GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon, resultLimit)
-}
-
-func (db *myDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, limit uint64) ([]models.Temperature, error) {
-	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(latitude, longitude, distance)
-
-	temperatures, err := db.GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon, from, to, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get temperatures from this time and place: %s", err.Error())
-	}
-
-	return temperatures, nil
-}
-
-func (db *myDB) GetTemperaturesWithinRect(nw_lat, nw_lon, se_lat, se_lon float64, resultLimit uint64) ([]models.Temperature, error) {
-	temperatures := []models.Temperature{}
-
-	result := db.impl.Where(
+func insertGeoSQL(gorm *gorm.DB, nw_lat, nw_lon, se_lat, se_lon float64) *gorm.DB {
+	// deal with in parameters, check if any of the coords seem dodgy? but what do we consider dodgy or nah
+	gorm = gorm.Where(
 		"latitude > ? AND latitude < ? AND longitude > ? AND longitude < ?",
 		se_lat, nw_lat, nw_lon, se_lon,
-	).Limit(int(resultLimit)).Order("timestamp2 desc").Find(&temperatures)
+	)
 
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return temperatures, nil
-}
-
-func (db *myDB) GetTemperaturesWithinRectangleAtTime(nw_lat, nw_lon, se_lat, se_lon float64, from, to time.Time, limit uint64) ([]models.Temperature, error) {
-	temperatures := []models.Temperature{}
-
-	gorm := db.impl.Order("timestamp2")
-
-	if !from.IsZero() || !to.IsZero() {
-		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
-		if gorm.Error != nil {
-			return nil, gorm.Error
-		}
-
-	}
-
-	result := gorm.Where(
-		"latitude > ? AND latitude < ? AND longitude > ? AND longitude < ?",
-		se_lat, nw_lat, nw_lon, se_lon,
-	).Limit(int(limit)).Find(&temperatures)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	return temperatures, nil
-}
-
-func getApproximatePoint(latitude, longitude float64, distance uint64) (nwLat, neLon, seLat, seLon float64) {
-	// Make a crude estimation of the coordinate offset based on the distance
-	d := float64(distance)
-	lat_delta := (180.0 / math.Pi) * (d / 6378137.0)
-	lon_delta := (180.0 / math.Pi) * (d / 6378137.0) / math.Cos(math.Pi/180.0*latitude)
-
-	nw_lat := latitude + lat_delta
-	nw_lon := longitude - lon_delta
-	se_lat := latitude - lat_delta
-	se_lon := longitude + lon_delta
-
-	// TODO: This is not correct, but a good enough first approximation for the MVP. We should make use of PostGIS
-	// and do a correct search for matches within a radius. Not within a "square" like this.
-	return nw_lat, nw_lon, se_lat, se_lon
+	return gorm
 }

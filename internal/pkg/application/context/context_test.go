@@ -152,31 +152,7 @@ func (db *mockDB) AddTemperatureMeasurement(device *string, latitude, longitude,
 	return nil, nil
 }
 
-func (db *mockDB) GetLatestTemperatures() ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesNearPoint(latitude, longitude float64, distance, resultLimit uint64) ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesNearPointAtTime(latitude, longitude float64, distance uint64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesWithDeviceID(deviceID string) ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesWithinRect(latitude0, longitude0, latitude1, longitude1 float64, resultLimit uint64) ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesWithinRectangleAtTime(latitude0, longitude0, latitude1, longitude1 float64, from, to time.Time, resultLimit uint64) ([]models.Temperature, error) {
-	return db.temps, nil
-}
-
-func (db *mockDB) GetTemperaturesWithinTimespan(from, to time.Time, limit uint64) ([]models.Temperature, error) {
+func (db *mockDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lon0, lat0, lon1, lat1 float64, resultLimit uint64) ([]models.Temperature, error) {
 	return db.temps, nil
 }
 

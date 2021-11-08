@@ -80,7 +80,7 @@ func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitie
 
 	temperatures, err = getTemperatures(cs.db, query)
 	if err != nil {
-		return fmt.Errorf("something went wrong when retrieving temperatures from database: %s", err)
+		return fmt.Errorf("something went wrong when retrieving temperatures from database: %s", err.Error())
 	}
 
 	if err == nil {

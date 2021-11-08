@@ -44,14 +44,11 @@ func TestThatGetTemperaturesWorksWithTimeSpanAndNearPoint(t *testing.T) {
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time2.Format(time.RFC3339))
 
-	geoQ := ngsi.GeoQuery{
-		Coordinates: []float64{64.2775, 17.1815},
-		GeoRel:      "near",
-	}
+	lat, lon := 64.2775, 17.1815
 
-	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(geoQ.Coordinates[0], geoQ.Coordinates[1], 1000)
+	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(lat, lon, 1000)
 
-	temps, _ := db.GetTemperatures("", time1, time3, geoQ.GeoRel, nw_lat, nw_lon, se_lat, se_lon, 1)
+	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationNearPoint, nw_lat, nw_lon, se_lat, se_lon, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
@@ -68,15 +65,7 @@ func TestThatGetTemperaturesWorksWithTimeSpanAndWithinRectangle(t *testing.T) {
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 63.278, 17.185, 12.7, true, time2.Format(time.RFC3339))
 
-	geoQ := ngsi.GeoQuery{
-		Coordinates: []float64{64.2775, 17.1815, 62.4354, 17.4748},
-		GeoRel:      "within",
-	}
-
-	nw_lat, nw_lon := geoQ.Coordinates[0], geoQ.Coordinates[1]
-	se_lat, se_lon := geoQ.Coordinates[2], geoQ.Coordinates[3]
-
-	temps, _ := db.GetTemperatures("", time1, time3, geoQ.GeoRel, nw_lat, nw_lon, se_lat, se_lon, 1)
+	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationWithinRect, 64.2775, 17.1815, 62.4354, 17.4748, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}

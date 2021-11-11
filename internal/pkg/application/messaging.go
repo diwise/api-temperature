@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"math"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog"
-	"github.com/streadway/amqp"
 
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
 	"github.com/diwise/api-temperature/pkg/infrastructure/messaging/commands"

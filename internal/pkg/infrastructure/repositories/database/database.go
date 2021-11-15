@@ -158,7 +158,7 @@ func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, t
 
 	result := db.impl.Create(measurement)
 	if result.Error != nil {
-		return nil, fmt.Errorf("failed to add temperature measurement: %s", result.Error.Error())
+		return nil, fmt.Errorf("create failed: %s", result.Error.Error())
 	}
 
 	return measurement, nil

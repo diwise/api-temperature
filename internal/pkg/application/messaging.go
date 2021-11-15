@@ -38,7 +38,7 @@ func NewStoreTemperatureCommandHandler(db database.Datastore, messenger Messagin
 		)
 
 		if err != nil {
-			log.Error().Err(err).Msg("failed to add temperature management")
+			log.Error().Err(err).Msg("failed to add temperature measurement")
 		}
 
 		return err
@@ -63,7 +63,7 @@ func NewStoreWaterTemperatureCommandHandler(db database.Datastore, messenger Mes
 		)
 
 		if err != nil {
-			log.Error().Err(err).Msg("failed to add temperature management")
+			log.Error().Err(err).Msg("failed to add temperature measurement")
 		}
 
 		return err
@@ -97,7 +97,7 @@ func NewTemperatureReceiver(db database.Datastore) messaging.TopicMessageHandler
 		)
 
 		if err != nil {
-			log.Error().Err(err).Msg("failed to add temperature management")
+			log.Error().Err(err).Msg("failed to add temperature measurement")
 		}
 	}
 }
@@ -129,7 +129,7 @@ func NewWaterTempReceiver(db database.Datastore) messaging.TopicMessageHandler {
 		)
 
 		if err != nil {
-			log.Error().Err(err).Msg("failed to add temperature management")
+			log.Error().Err(err).Msg("failed to add temperature measurement")
 		}
 	}
 }

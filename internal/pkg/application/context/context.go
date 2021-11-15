@@ -126,7 +126,7 @@ func (cs contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request
 
 func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.Temperature, error) {
 	deviceID := ""
-	if query.Device() != "" {
+	if query.HasDeviceReference() && query.Device() != "" {
 		deviceID = strings.TrimPrefix(query.Device(), fiware.DeviceIDPrefix)
 	}
 

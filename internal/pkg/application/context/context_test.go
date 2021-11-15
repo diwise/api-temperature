@@ -139,20 +139,20 @@ func TestGetEntitiesOfUnknownTypeReturnsError(t *testing.T) {
 }
 
 type mockDB struct {
-	temps []models.Temperature
+	temps []models.TemperatureV2
 }
 
-func createMockedDB(records ...models.Temperature) database.Datastore {
+func createMockedDB(records ...models.TemperatureV2) database.Datastore {
 	db := &mockDB{}
 	db.temps = append(db.temps, records...)
 	return db
 }
 
-func (db *mockDB) AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error) {
+func (db *mockDB) AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.TemperatureV2, error) {
 	return nil, nil
 }
 
-func (db *mockDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lon0, lat0, lon1, lat1 float64, resultLimit uint64) ([]models.Temperature, error) {
+func (db *mockDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lon0, lat0, lon1, lat1 float64, resultLimit uint64) ([]models.TemperatureV2, error) {
 	return db.temps, nil
 }
 
@@ -218,10 +218,10 @@ func (q mockQuery) Request() *http.Request {
 	return nil
 }
 
-func createTempRecord(temp float32, water bool, when string) models.Temperature {
-	t := models.Temperature{}
+func createTempRecord(temp float32, water bool, when string) models.TemperatureV2 {
+	t := models.TemperatureV2{}
 	t.Temp = temp
 	t.Water = water
-	t.Timestamp2, _ = time.Parse(time.RFC3339Nano, when)
+	t.Timestamp, _ = time.Parse(time.RFC3339Nano, when)
 	return t
 }

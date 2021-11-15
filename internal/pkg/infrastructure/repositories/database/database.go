@@ -19,8 +19,8 @@ import (
 
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
 type Datastore interface {
-	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error)
-	GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.Temperature, error)
+	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.TemperatureV2, error)
+	GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.TemperatureV2, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -131,58 +131,49 @@ func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
 		log:  log,
 	}
 
-	db.impl.AutoMigrate(&models.Temperature{})
-
-	if db.impl.Migrator().HasIndex(&models.Temperature{}, "idx_device_timestamp") {
-		db.impl.Migrator().DropIndex(&models.Temperature{}, "idx_device_timestamp")
-	}
+	db.impl.AutoMigrate(&models.Temperature{}, &models.TemperatureV2{})
 
 	return db, nil
 }
 
 //AddTemperatureMeasurement takes a device, position and a temp and adds a record to the database
-func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.Temperature, error) {
+func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.TemperatureV2, error) {
 
 	ts, err := time.Parse(time.RFC3339Nano, when)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse timestamp from %s : (%s)", when, err.Error())
 	}
 
-	measurement := &models.Temperature{
-		Latitude:   latitude,
-		Longitude:  longitude,
-		Temp:       float32(temp),
-		Water:      water,
-		Timestamp2: ts,
+	measurement := &models.TemperatureV2{
+		Latitude:  latitude,
+		Longitude: longitude,
+		Temp:      float32(temp),
+		Water:     water,
+		Timestamp: ts,
 	}
 
 	if device != nil {
 		measurement.Device = *device
-
-		// Temporary stop gap to reduce the number of duplicates stored
-		// If we can find a record with the same time and device, then we should not create yet another one
-		stored := &models.Temperature{Device: *device, Timestamp2: ts, Water: water}
-		result := db.impl.Where(stored).First(&stored)
-		if result.Error == nil {
-			return nil, fmt.Errorf("temperature already added for %s at %s", *device, when)
-		}
 	}
 
-	db.impl.Create(measurement)
+	result := db.impl.Create(measurement)
+	if result.Error != nil {
+		return nil, fmt.Errorf("failed to add temperature measurement: %s", result.Error.Error())
+	}
 
 	return measurement, nil
 }
 
-func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.Temperature, error) {
-	temps := []models.Temperature{}
-	gorm := db.impl.Order("timestamp2")
+func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.TemperatureV2, error) {
+	temps := []models.TemperatureV2{}
+	gorm := db.impl.Order("timestamp")
 
 	if deviceId != "" {
 		gorm = gorm.Where("device = ?", deviceId)
 	}
 
 	if !from.IsZero() || !to.IsZero() {
-		gorm = insertTemporalSQL(gorm, "timestamp2", from, to)
+		gorm = insertTemporalSQL(gorm, "timestamp", from, to)
 		if gorm.Error != nil {
 			return nil, gorm.Error
 		}

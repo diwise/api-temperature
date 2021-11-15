@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/matryer/is"
 	"github.com/rs/zerolog/log"
 
 	"github.com/diwise/api-temperature/internal/pkg/infrastructure/repositories/database"
@@ -14,6 +15,21 @@ import (
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+func TestThatAddTemperatureHandlesDuplicates(t *testing.T) {
+	is := is.New(t)
+	log := log.Logger
+	db, _ := database.NewDatabaseConnection(database.NewSQLiteConnector(log))
+
+	now := time.Now().UTC()
+	deviceName := "mydevice"
+
+	_, err := db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, now.Format(time.RFC3339))
+	is.NoErr(err) // no error expected
+
+	_, err = db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, now.Format(time.RFC3339))
+	is.True(err != nil) // second add should return an error
 }
 
 func TestThatGetTemperaturesWorksWithDeviceIDAndTimeSpan(t *testing.T) {

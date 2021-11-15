@@ -23,9 +23,9 @@ func CreateSource(db database.Datastore) ngsi.ContextSource {
 	return &contextSource{db: db}
 }
 
-func convertDatabaseRecordToWaterQualityObserved(r *models.Temperature) *fiware.WaterQualityObserved {
+func convertDatabaseRecordToWaterQualityObserved(r *models.TemperatureV2) *fiware.WaterQualityObserved {
 	if r != nil {
-		entity := fiware.NewWaterQualityObserved("temperature:"+r.Device, r.Latitude, r.Longitude, r.Timestamp2.Format(time.RFC3339))
+		entity := fiware.NewWaterQualityObserved("temperature:"+r.Device, r.Latitude, r.Longitude, r.Timestamp.Format(time.RFC3339))
 		entity.Temperature = types.NewNumberProperty(math.Round(float64(r.Temp*10)) / 10)
 		return entity
 	}
@@ -33,9 +33,9 @@ func convertDatabaseRecordToWaterQualityObserved(r *models.Temperature) *fiware.
 	return nil
 }
 
-func convertDatabaseRecordToWeatherObserved(r *models.Temperature) *fiware.WeatherObserved {
+func convertDatabaseRecordToWeatherObserved(r *models.TemperatureV2) *fiware.WeatherObserved {
 	if r != nil {
-		entity := fiware.NewWeatherObserved("temperature:"+r.Device, r.Latitude, r.Longitude, r.Timestamp2.Format(time.RFC3339))
+		entity := fiware.NewWeatherObserved("temperature:"+r.Device, r.Latitude, r.Longitude, r.Timestamp.Format(time.RFC3339))
 		entity.Temperature = types.NewNumberProperty(math.Round(float64(r.Temp*10)) / 10)
 		return entity
 	}
@@ -49,7 +49,7 @@ func (cs contextSource) CreateEntity(typeName, entityID string, req ngsi.Request
 
 func (cs contextSource) GetEntities(query ngsi.Query, callback ngsi.QueryEntitiesCallback) error {
 
-	var temperatures []models.Temperature
+	var temperatures []models.TemperatureV2
 	var err error
 
 	if query == nil {
@@ -124,7 +124,7 @@ func (cs contextSource) UpdateEntityAttributes(entityID string, req ngsi.Request
 	return errors.New("UpdateEntityAttributes is not supported by this service")
 }
 
-func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.Temperature, error) {
+func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.TemperatureV2, error) {
 	deviceID := ""
 	if query.HasDeviceReference() && query.Device() != "" {
 		deviceID = strings.TrimPrefix(query.Device(), fiware.DeviceIDPrefix)

@@ -16,7 +16,7 @@ func (r *entityResolver) FindDeviceByID(ctx context.Context, id string) (*Device
 	return &Device{ID: id}, nil
 }
 
-func convertDatabaseRecordToGQL(measurement *models.Temperature) *Temperature {
+func convertDatabaseRecordToGQL(measurement *models.TemperatureV2) *Temperature {
 	if measurement != nil {
 		temp := &Temperature{
 			From: &Origin{
@@ -28,7 +28,7 @@ func convertDatabaseRecordToGQL(measurement *models.Temperature) *Temperature {
 					ID: measurement.Device,
 				},
 			},
-			When: measurement.Timestamp2.Format(time.RFC3339),
+			When: measurement.Timestamp.Format(time.RFC3339),
 			Temp: math.Round(float64(measurement.Temp*10)) / 10,
 		}
 

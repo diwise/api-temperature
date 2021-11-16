@@ -133,6 +133,45 @@ func NewDatabaseConnection(connect ConnectorFunc) (Datastore, error) {
 
 	db.impl.AutoMigrate(&models.Temperature{}, &models.TemperatureV2{})
 
+	oldtemps := []models.Temperature{}
+	result := db.impl.Order("timestamp2").Limit(100).Find(&oldtemps)
+	migrationCount := 0
+	duplicateCount := 0
+
+	log.Info().Msg("checking for temperature data to be migrated ...")
+
+	for result.Error == nil && len(oldtemps) > 0 {
+
+		for _, old := range oldtemps {
+			t := &models.TemperatureV2{
+				Latitude:  old.Latitude,
+				Longitude: old.Longitude,
+				Device:    old.Device,
+				Temp:      old.Temp,
+				Water:     old.Water,
+				Timestamp: old.Timestamp2,
+			}
+
+			r := db.impl.Create(t)
+			if r.Error == nil {
+				migrationCount++
+			} else {
+				duplicateCount++
+			}
+
+			db.impl.Delete(&old)
+		}
+
+		oldtemps = []models.Temperature{}
+		result = db.impl.Order("timestamp2").Limit(100).Find(&oldtemps)
+	}
+
+	if migrationCount > 0 {
+		log.Info().Msgf("migrated %d temperature values to the new table and removed %d duplicates", migrationCount, duplicateCount)
+	} else {
+		log.Info().Msg("no old temperature data found")
+	}
+
 	return db, nil
 }
 

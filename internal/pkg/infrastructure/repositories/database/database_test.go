@@ -43,7 +43,7 @@ func TestThatGetTemperaturesWorksWithDeviceIDAndTimeSpan(t *testing.T) {
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 64.278, 17.182, 12.7, true, time2.Format(time.RFC3339))
 
-	temps, _ := db.GetTemperatures(deviceName, time1, time3, "", 0.0, 0.0, 0.0, 0.0, 1)
+	temps, _ := db.GetTemperatures(deviceName, time1, time3, "", 0.0, 0.0, 0.0, 0.0, 0, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
@@ -64,7 +64,7 @@ func TestThatGetTemperaturesWorksWithTimeSpanAndNearPoint(t *testing.T) {
 
 	nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(lat, lon, 1000)
 
-	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationNearPoint, nw_lat, nw_lon, se_lat, se_lon, 1)
+	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationNearPoint, nw_lat, nw_lon, se_lat, se_lon, 0, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}
@@ -81,7 +81,7 @@ func TestThatGetTemperaturesWorksWithTimeSpanAndWithinRectangle(t *testing.T) {
 	deviceName := "mydevice"
 	db.AddTemperatureMeasurement(&deviceName, 63.278, 17.185, 12.7, true, time2.Format(time.RFC3339))
 
-	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationWithinRect, 64.2775, 17.1815, 62.4354, 17.4748, 1)
+	temps, _ := db.GetTemperatures("", time1, time3, ngsi.GeoSpatialRelationWithinRect, 64.2775, 17.1815, 62.4354, 17.4748, 0, 1)
 	if len(temps) != 1 {
 		t.Errorf("number of returned temperatures differ from expectation. %d != %d", len(temps), 1)
 	}

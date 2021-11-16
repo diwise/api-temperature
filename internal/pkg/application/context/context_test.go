@@ -152,7 +152,7 @@ func (db *mockDB) AddTemperatureMeasurement(device *string, latitude, longitude,
 	return nil, nil
 }
 
-func (db *mockDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lon0, lat0, lon1, lat1 float64, resultLimit uint64) ([]models.TemperatureV2, error) {
+func (db *mockDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lon0, lat0, lon1, lat1 float64, resultOffset, resultLimit uint64) ([]models.TemperatureV2, error) {
 	return db.temps, nil
 }
 

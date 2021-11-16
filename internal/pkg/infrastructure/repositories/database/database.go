@@ -20,7 +20,7 @@ import (
 //Datastore is an interface that is used to inject the database into different handlers to improve testability
 type Datastore interface {
 	AddTemperatureMeasurement(device *string, latitude, longitude, temp float64, water bool, when string) (*models.TemperatureV2, error)
-	GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.TemperatureV2, error)
+	GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultOffset, resultLimit uint64) ([]models.TemperatureV2, error)
 }
 
 var dbCtxKey = &databaseContextKey{"database"}
@@ -203,7 +203,7 @@ func (db *myDB) AddTemperatureMeasurement(device *string, latitude, longitude, t
 	return measurement, nil
 }
 
-func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultLimit uint64) ([]models.TemperatureV2, error) {
+func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial string, lat0, lon0, lat1, lon1 float64, resultOffset, resultLimit uint64) ([]models.TemperatureV2, error) {
 	temps := []models.TemperatureV2{}
 	gorm := db.impl.Order("timestamp")
 
@@ -220,6 +220,10 @@ func (db *myDB) GetTemperatures(deviceId string, from, to time.Time, geoSpatial 
 
 	if geoSpatial != "" {
 		gorm = insertGeoSQL(gorm, lat0, lon0, lat1, lon1)
+	}
+
+	if resultOffset > 0 {
+		gorm = gorm.Offset(int(resultOffset))
 	}
 
 	result := gorm.Limit(int(resultLimit)).Find(&temps)

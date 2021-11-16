@@ -137,6 +137,7 @@ func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.Temperat
 		from, to = query.Temporal().TimeSpan()
 	}
 
+	offset := query.PaginationOffset()
 	limit := query.PaginationLimit()
 
 	if query.IsGeoQuery() {
@@ -147,17 +148,17 @@ func getTemperatures(db database.Datastore, query ngsi.Query) ([]models.Temperat
 
 			nw_lat, nw_lon, se_lat, se_lon := getApproximatePoint(lat, lon, uint64(distance))
 
-			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, limit)
+			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, offset, limit)
 		} else if geo.GeoRel == ngsi.GeoSpatialRelationWithinRect {
 			nw_lat, nw_lon, se_lat, se_lon, err := geo.Rectangle()
 			if err != nil {
 				return nil, err
 			}
-			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, limit)
+			return db.GetTemperatures(deviceID, from, to, geo.GeoRel, nw_lat, nw_lon, se_lat, se_lon, offset, limit)
 		}
 	}
 
-	return db.GetTemperatures(deviceID, from, to, "", 0.0, 0.0, 0.0, 0.0, query.PaginationLimit())
+	return db.GetTemperatures(deviceID, from, to, "", 0.0, 0.0, 0.0, 0.0, offset, limit)
 }
 
 func queriedAttributesDoNotInclude(attributes []string, requiredAttribute string) bool {

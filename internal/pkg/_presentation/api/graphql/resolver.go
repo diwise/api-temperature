@@ -44,7 +44,7 @@ func (r *queryResolver) Temperatures(ctx context.Context) ([]*Temperature, error
 		return nil, err
 	}
 
-	temperatures, err := db.GetTemperatures("", time.Time{}, time.Time{}, "", 0.0, 0.0, 0.0, 0.0, uint64(100))
+	temperatures, err := db.GetTemperatures("", time.Time{}, time.Time{}, "", 0.0, 0.0, 0.0, 0.0, uint64(0), uint64(100))
 
 	if err != nil {
 		panic("Failed to query latest temperatures.")
